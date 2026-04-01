@@ -173,6 +173,7 @@ const DEPT_COLORS = {
   'Atelier-Prod':         { bg: '#EBF6F3', border: '#389A76', dot: '#0F6E56', text: '#04342C' },
   'Merchandising':        { bg: '#FAF0F4', border: '#C06688', dot: '#993556', text: '#4B1528' },
   'Workshop':             { bg: '#FAF4EB', border: '#B87828', dot: '#854F0B', text: '#412402' },
+  'Studio':               { bg: '#F2F1FB', border: '#8076CC', dot: '#534AB7', text: '#26215C' },
 };
 const FALLBACK = { bg: '#F4F3F0', border: '#AFADA8', dot: '#6B6B66', text: '#3A3A38' };
 const dc = d => DEPT_COLORS[d] || FALLBACK;
@@ -282,24 +283,28 @@ function buildTree() {
   Object.values(byName).forEach(parent => {
     const deptOrder = [], buckets = {};
     parent.children.forEach(child => {
-      const key = ATELIER_DEPT_VARIANTS.has(child.dept) ? 'Atelier' : child.dept;
+      const key = parent.name === 'Lillian Whittaker' ? 'Studio' :
+                  ATELIER_DEPT_VARIANTS.has(child.dept) ? 'Atelier' : child.dept;
       if (!buckets[key]) { buckets[key] = []; deptOrder.push(key); }
       buckets[key].push(child);
     });
     const next = [];
     deptOrder.forEach(dept => {
       const all = buckets[dept];
-      if (dept === 'Atelier') {
+      if (dept === 'Studio') {
+        if (all.length >= 2) next.push(mkGroup(all, 'Studio'));
+        else all.forEach(n => next.push(n));
+      } else if (dept === 'Atelier') {
         if (all.length >= 2) next.push(mkGroup(all, 'Atelier'));
         else all.forEach(n => next.push(n));
       } else if (dept === 'Workshop') {
         if (all.length >= 2) next.push(mkGroup(all, 'Workshop'));
         else all.forEach(n => next.push(n));
       } else if (CONSULT_DEPTS.has(dept)) {
-        const ng = all.filter(c => !c.inGusto);
+        const ng = all.filter(c => !c.inGusto && c.name.split(' ')[0] !== 'Jin');
         if (ng.length >= 2) next.push(mkGroup(ng, dept));
         else ng.forEach(n => next.push(n));
-        all.filter(c => c.inGusto).forEach(n => next.push(n));
+        all.filter(c => c.inGusto || c.name.split(' ')[0] === 'Jin').forEach(n => next.push(n));
       } else {
         all.forEach(n => next.push(n));
       }
@@ -310,6 +315,11 @@ function buildTree() {
       if (ag !== bg) return ag - bg;
       return (a.dept || '').localeCompare(b.dept || '');
     });
+    // Swap Molly Malone and Jason Weinback
+    const _mi = next.findIndex(c => c.name === 'Molly Malone');
+    const _ji = next.findIndex(c => c.name === 'Jason Weinback');
+    if (_mi !== -1 && _ji !== -1) [next[_mi], next[_ji]] = [next[_ji], next[_mi]];
+
     parent.children = next;
   });
   return { root, byName, stdW };
@@ -396,7 +406,7 @@ function render() {
       g.appendChild(box);
 
       // Label on top border
-      const label = node.dept === 'Design' ? 'Design Consultants' : node.dept === 'Development' ? 'Dev Consultants' : node.dept;
+      const label = node.dept === 'Design' ? 'Design Consultants' : node.dept === 'Development' ? 'Dev Consultants' : node.dept === 'Studio' ? 'Studio team' : node.dept;
       const labelW = tw(label, 9, '500') * 1.05 + 8;
       const lgap = document.createElementNS(NS, 'rect');
       lgap.setAttribute('x', '12'); lgap.setAttribute('y', '-3');
