@@ -246,15 +246,6 @@ function applyFilters() {
 function buildTree() {
   const byName = {};
   people.forEach(p => byName[p.name] = { ...p, children: [] });
-  // Override: all Atelier members report to Federica
-  Object.values(byName).forEach(n => {
-    if (n.dept === 'Atelier' || n.dept === 'Atelier-Dev' || n.dept === 'Atelier-Prod') {
-      n.manager = 'Federica Santavenere';
-    }
-    if (n.dept === 'Workshop') {
-      n.manager = 'Melissa Rogers';
-    }
-  });
   let root = null;
   people.forEach(p => {
     const node = byName[p.name];
