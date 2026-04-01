@@ -172,6 +172,7 @@ const DEPT_COLORS = {
   'Atelier-Dev':          { bg: '#EBF6F3', border: '#389A76', dot: '#0F6E56', text: '#04342C' },
   'Atelier-Prod':         { bg: '#EBF6F3', border: '#389A76', dot: '#0F6E56', text: '#04342C' },
   'Merchandising':        { bg: '#FAF0F4', border: '#C06688', dot: '#993556', text: '#4B1528' },
+  'Workshop':             { bg: '#FAF4EB', border: '#B87828', dot: '#854F0B', text: '#412402' },
 };
 const FALLBACK = { bg: '#F4F3F0', border: '#AFADA8', dot: '#6B6B66', text: '#3A3A38' };
 const dc = d => DEPT_COLORS[d] || FALLBACK;
@@ -244,10 +245,20 @@ function applyFilters() {
 function buildTree() {
   const byName = {};
   people.forEach(p => byName[p.name] = { ...p, children: [] });
+  // Override: all Atelier members report to Federica
+  Object.values(byName).forEach(n => {
+    if (n.dept === 'Atelier' || n.dept === 'Atelier-Dev' || n.dept === 'Atelier-Prod') {
+      n.manager = 'Federica Santavenere';
+    }
+    if (n.dept === 'Workshop') {
+      n.manager = 'Melissa Rogers';
+    }
+  });
   let root = null;
   people.forEach(p => {
-    if (p.manager && byName[p.manager]) byName[p.manager].children.push(byName[p.name]);
-    else if (!p.manager) root = byName[p.name];
+    const node = byName[p.name];
+    if (node.manager && byName[node.manager]) byName[node.manager].children.push(node);
+    else if (!node.manager) root = node;
   });
   // Sort children by dept so same-dept siblings are adjacent
   Object.values(byName).forEach(n => {
@@ -260,7 +271,7 @@ function buildTree() {
   // Group same-dept children by dept type:
   // Atelier-Dev / Atelier-Prod: group ALL workers (they're Gusto employees)
   // Design / Development: group non-Gusto only (Gusto members stay individual)
-  const ATELIER_DEPTS = new Set(['Atelier-Dev', 'Atelier-Prod']);
+  const ATELIER_DEPT_VARIANTS = new Set(['Atelier', 'Atelier-Dev', 'Atelier-Prod']);
   const CONSULT_DEPTS = new Set(['Design', 'Development']);
   const mkGroup = (members, dept) => ({
     isGroup: true, id: 'group_' + dept, members, dept,
@@ -271,14 +282,19 @@ function buildTree() {
   Object.values(byName).forEach(parent => {
     const deptOrder = [], buckets = {};
     parent.children.forEach(child => {
-      if (!buckets[child.dept]) { buckets[child.dept] = []; deptOrder.push(child.dept); }
-      buckets[child.dept].push(child);
+      const key = ATELIER_DEPT_VARIANTS.has(child.dept) ? 'Atelier' : child.dept;
+      if (!buckets[key]) { buckets[key] = []; deptOrder.push(key); }
+      buckets[key].push(child);
     });
     const next = [];
     deptOrder.forEach(dept => {
       const all = buckets[dept];
-      if (ATELIER_DEPTS.has(dept) && all.length >= 2) {
-        next.push(mkGroup(all, dept));
+      if (dept === 'Atelier') {
+        if (all.length >= 2) next.push(mkGroup(all, 'Atelier'));
+        else all.forEach(n => next.push(n));
+      } else if (dept === 'Workshop') {
+        if (all.length >= 2) next.push(mkGroup(all, 'Workshop'));
+        else all.forEach(n => next.push(n));
       } else if (CONSULT_DEPTS.has(dept)) {
         const ng = all.filter(c => !c.inGusto);
         if (ng.length >= 2) next.push(mkGroup(ng, dept));
