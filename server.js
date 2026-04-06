@@ -39,16 +39,24 @@ app.get('/api/team', async (req, res) => {
       offset = data.offset;
     } while (offset);
 
+    // Build a record ID -> name map to resolve linked "Reports to" field
+    const idToName = {};
+    records.forEach(r => { if (r.fields['Name']) idToName[r.id] = r.fields['Name']; });
+
     const people = records
-      .map(r => ({
-        id: r.id,
-        name: r.fields['Name'] || '',
-        title: r.fields['Title'] || '',
-        dept: {'Atelier - Development':'Atelier-Dev','Atelier - Production':'Atelier-Prod'}[r.fields['Department']] || r.fields['Department'] || '',
-        manager: r.fields['Reports to'] || '',
-        inGusto: r.fields['In Gusto'] === true,
-        notes: r.fields['Notes'] || '',
-      }))
+      .map(r => {
+        const reportsTo = r.fields['Reports to'];
+        const managerName = Array.isArray(reportsTo) && reportsTo[0] ? idToName[reportsTo[0]] || '' : '';
+        return {
+          id: r.id,
+          name: r.fields['Name'] || '',
+          title: r.fields['Title'] || '',
+          dept: {'Atelier - Development':'Atelier-Dev','Atelier - Production':'Atelier-Prod'}[r.fields['Department']] || r.fields['Department'] || '',
+          manager: managerName,
+          inGusto: r.fields['In Gusto'] === true,
+          notes: r.fields['Notes'] || '',
+        };
+      })
       .filter(p => p.name);
 
     res.json({ people, updatedAt: new Date().toISOString() });
