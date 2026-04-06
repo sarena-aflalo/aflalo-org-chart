@@ -45,7 +45,7 @@ app.get('/api/team', async (req, res) => {
         name: r.fields['Name'] || '',
         title: r.fields['Title'] || '',
         dept: {'Atelier - Development':'Atelier-Dev','Atelier - Production':'Atelier-Prod'}[r.fields['Department']] || r.fields['Department'] || '',
-        manager: r.fields['Manager'] || '',
+        manager: r.fields['Reports to'] || '',
         inGusto: r.fields['In Gusto'] === true,
         notes: r.fields['Notes'] || '',
       }))
